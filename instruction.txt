@@ -1,0 +1,123 @@
+===========================================================
+CONCERNHUB - STUDENT CONCERN TRACKING SYSTEM
+Installation and Operating Instructions
+===========================================================
+
+
+1. SYSTEM OVERVIEW
+------------------
+ConcernHub is a web-based platform designed to bridge the communication gap between students and school departments (Academic, Financial, and Welfare).
+
+It features:
+- AI-Lite Priority Detection: Automatically flags urgent concerns based on keywords.
+- SLA Protection: Automated escalation if tickets are not handled within a set time.
+- Real-time Email Notifications: Powered by PHPMailer via Gmail SMTP.
+- Audit Trail: Complete logging of all actions for accountability.
+
+
+2. PREREQUISITES
+----------------
+- Web Server: XAMPP, WAMP, or any PHP-enabled server.
+- PHP Version: 7.4 or higher.
+- Database: MySQL/MariaDB.
+- Folders: Ensure a folder named 'uploads/' exists in the root directory for attachments.
+- PHPMailer: Ensure the 'PHPMailer/' folder is in the root directory.
+
+
+3. DATABASE SETUP
+-----------------
+Create a database named `concern_track` and execute the following SQL script:
+
+--- START OF DATABASE.SQL ---
+CREATE DATABASE IF NOT EXISTS concern_track;
+USE concern_track;
+
+CREATE TABLE departments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50), 
+    email VARCHAR(100)
+);
+
+CREATE TABLE students (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    student_number VARCHAR(50) UNIQUE,
+    full_name VARCHAR(100),
+    email VARCHAR(100) UNIQUE,
+    password VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE concerns (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ticket_id VARCHAR(10) UNIQUE,
+    category VARCHAR(50),
+    priority ENUM('Low', 'Medium', 'Urgent') DEFAULT 'Low',
+    description TEXT,
+    attachment VARCHAR(255),
+    is_anonymous BOOLEAN DEFAULT 0,
+    student_email VARCHAR(100),
+    status ENUM('Submitted', 'Routed', 'Read', 'Screened', 'Resolved', 'Escalated') DEFAULT 'Submitted',
+    dept_id INT,
+    is_escalated BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    read_at DATETIME NULL,
+    screened_at DATETIME NULL,
+    FOREIGN KEY (dept_id) REFERENCES departments(id)
+);
+
+CREATE TABLE audit_trail (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    concern_id INT,
+    action VARCHAR(255),
+    actor VARCHAR(100),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE admins (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE,
+    password VARCHAR(255)
+);
+
+INSERT INTO departments (name, email) VALUES 
+('Academic', 'academic.dept@school.edu'),
+('Financial', 'finance.dept@school.edu'),
+('Welfare', 'guidance.dept@school.edu');
+--- END OF DATABASE.SQL ---
+
+
+4. CONFIGURATION
+----------------
+- Database: Edit 'db.php' to update your database credentials.
+- Email: Edit 'mailer.php' and update the SMTP Username and App Password to your Gmail credentials.
+
+
+5. USER WORKFLOW
+----------------
+A. Student Side:
+   1. Registration: Students register at 'register.php'.
+   2. Login: Access the dashboard via 'login.php'.
+   3. Submission: Use 'index.php' to submit concerns.
+      - AI-Lite detects keywords like "emergency" or "harassment" to set URGENT priority.
+      - Students can upload evidence (images/videos) and choose to remain anonymous.
+   4. Tracking: View the status of submitted tickets in 'my_concerns.php'.
+
+B. Admin Side:
+   1. Admin Setup: Run 'create_admin.php' once to create the default 'admin_dev' account.
+   2. Login: Access the admin panel via 'admin_login.php'.
+   3. Ticket Management:
+      - 'admin.php': View and filter all incoming tickets.
+      - 'view_ticket.php': Viewing a ticket automatically updates status from 'Routed' to 'Read'.
+      - 'update_status.php': Admins can move status to 'Screened' or 'Resolved'.
+   4. Analytics: View department performance and escalation rates in 'admin_stats.php'.
+
+
+6. SERVICE LEVEL AGREEMENT (SLA) & ESCALATION
+---------------------------------------------
+The system enforces efficiency through 'sla_cron.php':
+- If a ticket is not "Read" within 2 days, it escalates to "Escalated".
+- If a ticket is not "Screened" within 5 days, it escalates to "Escalated".
+- Notifications are sent to Department Heads upon escalation.
+
+===========================================================
